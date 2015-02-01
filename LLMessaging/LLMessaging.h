@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 Damien DeVille. All rights reserved.
 //
 
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
 #import <LLMessaging/LLSocketConnection.h>
 #import <LLMessaging/LLSocketMessage.h>
