@@ -1,6 +1,6 @@
 //
 //  LLSocketConnection.h
-//  Test
+//  LLMessaging
 //
 //  Created by Damien DeVille on 1/31/15.
 //  Copyright (c) 2015 Damien DeVille. All rights reserved.
