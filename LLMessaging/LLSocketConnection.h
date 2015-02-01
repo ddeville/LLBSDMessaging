@@ -12,10 +12,16 @@
 
 @protocol LLSocketConnectionDelegate <NSObject>
 
+/*!
+    \brief
+ */
 - (void)connection:(LLSocketConnection *)connection didReceiveMessage:(LLSocketMessage *)message fromConnectionInfo:(LLSocketInfo *)info;
 
 @end
 
+/*!
+    \brief
+ */
 @interface LLSocketConnection : NSObject
 
 /*!
@@ -45,6 +51,9 @@
  */
 @property (assign, getter=isValid, nonatomic) BOOL valid;
 
+/*!
+    \brief
+ */
 @property (copy) void (^invalidationHandler)(void);
 
 /*!
@@ -58,22 +67,43 @@
 
 @protocol LLSocketConnectionServerDelegate <LLSocketConnectionDelegate>
 
+/*!
+    \brief
+ */
 - (BOOL)server:(LLSocketConnectionServer *)server shouldAcceptNewConnection:(LLSocketInfo *)connectionInfo;
 
 @end
 
+/*!
+    \brief
+ */
 @interface LLSocketConnectionServer : LLSocketConnection
 
+/*!
+    \brief
+ */
+@property (weak, nonatomic) id <LLSocketConnectionServerDelegate> delegate;
+
+/*!
+    \brief
+ */
 - (void)broadcastMessage:(LLSocketMessage *)message;
 
+/*!
+    \brief
+ */
 - (void)sendMessage:(LLSocketMessage *)message toClient:(LLSocketInfo *)info;
-
-@property (weak, nonatomic) id <LLSocketConnectionServerDelegate> delegate;
 
 @end
 
+/*!
+    \brief
+ */
 @interface LLSocketConnectionClient : LLSocketConnection
 
+/*!
+    \brief
+ */
 - (void)sendMessage:(LLSocketMessage *)message;
 
 @end
