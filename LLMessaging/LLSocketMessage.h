@@ -10,9 +10,19 @@
 
 @interface LLSocketMessage : NSObject
 
+/*!
+    \brief
+ */
 + (instancetype)messageWithName:(NSString *)name userInfo:(NSDictionary *)userInfo;
 
+/*!
+    \brief
+ */
 @property (copy, nonatomic) NSString *name;
+
+/*!
+    \brief
+ */
 @property (strong, nonatomic) NSDictionary *userInfo;
 
 @end

@@ -10,9 +10,19 @@
 
 @interface LLSocketInfo : NSObject <NSSecureCoding, NSCopying>
 
+/*!
+    \brief
+ */
 - (id)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier;
 
+/*!
+    \brief
+ */
 @property (readonly, copy, nonatomic) NSString *processName;
+
+/*!
+    \brief
+ */
 @property (readonly, assign, nonatomic) pid_t processIdentifier;
 
 @end
