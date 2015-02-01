@@ -18,13 +18,38 @@
 
 @interface LLSocketConnection : NSObject
 
+/*!
+    \brief
+ */
 - (id)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier;
 
-- (void)resume;
-- (void)suspend;
-
+/*!
+    \brief
+ */
 @property (weak, nonatomic) id <LLSocketConnectionDelegate> delegate;
 
+/*!
+    \brief
+ */
+- (void)start;
+
+/*!
+    \brief
+    */
+- (void)invalidate;
+
+/*!
+    \brief
+    Returns whether the connection is currently valid (`start` was called and the connection was not invalidated).
+    KVO compliant.
+ */
+@property (assign, getter=isValid, nonatomic) BOOL valid;
+
+@property (copy) void (^invalidationHandler)(void);
+
+/*!
+    \brief
+ */
 @property (readonly, strong, nonatomic) LLSocketInfo *info;
 
 @end

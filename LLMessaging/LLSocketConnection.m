@@ -8,23 +8,38 @@
 
 #import "LLSocketConnection.h"
 
-#import <TargetConditionals.h>
 #import <sys/socket.h>
+#import <sys/sysctl.h>
 #import <sys/un.h>
+#import <TargetConditionals.h>
 
 #import "LLSocketInfo.h"
 #import "LLSocketMessage.h"
 
+static NSString * const kLLSocketConnectionMessageNameKey = @"name";
+static NSString * const kLLSocketConnectionMessageUserInfoKey = @"userInfo";
+static NSString * const kLLSocketConnectionMessageConnectionInfoKey = @"connectionInfo";
+
+static const pid_t kInvalidPid = -1;
+
+#pragma mark - LLSocketConnection
+
 @interface LLSocketConnection ()
 
 @property (assign, nonatomic) NSString *socketPath;
-@property (assign, nonatomic) dispatch_fd_t fileDescriptor;
+@property (assign, nonatomic) dispatch_fd_t fd;
 
 @property (strong, nonatomic) dispatch_queue_t queue;
+
+- (void)_startOnSerialQueue;
+- (void)_invalidateOnSerialQueue;
+- (void)_completeReadingWithMessage:(LLSocketMessage *)message info:(LLSocketInfo *)info;
 
 @end
 
 @implementation LLSocketConnection
+
+static NSString *_LLSocketConnectionValidObservationContext = @"_LLSocketConnectionValidObservationContext";
 
 - (id)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
 {
@@ -35,25 +50,78 @@
         return nil;
     }
 
-    _fileDescriptor = -1;
+    _fd = kInvalidPid;
     _socketPath = _createSocketPath(applicationGroupIdentifier, connectionIdentifier);
-    _queue = dispatch_queue_create("LLSocketConnection serial queue", DISPATCH_QUEUE_SERIAL);
-    _info = [[LLSocketInfo alloc] initWithBundleIdentifier:[[NSBundle mainBundle] bundleIdentifier] processIdentifier:[[NSProcessInfo processInfo] processIdentifier]];
+    _queue = dispatch_queue_create("com.ddeville.llmessaging.serial-queue", DISPATCH_QUEUE_SERIAL);
+    _info = [[LLSocketInfo alloc] initWithProcessName:[[NSProcessInfo processInfo] processName] processIdentifier:[[NSProcessInfo processInfo] processIdentifier]];
+
+    [self addObserver:self forKeyPath:@"valid" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&_LLSocketConnectionValidObservationContext];
 
     return self;
 }
 
 - (void)dealloc
 {
-    [self suspend];
+    /*
+        Note: By removing the observer before invalidating we ensure that the invalidation handler is not invoked.
+     */
+    [self removeObserver:self forKeyPath:@"valid" context:&_LLSocketConnectionValidObservationContext];
+    [self invalidate];
 }
 
-- (void)resume
+- (void)start
+{
+    dispatch_async(self.queue, ^ {
+        [self _startOnSerialQueue];
+    });
+}
+
+- (void)invalidate
+{
+    dispatch_async(self.queue, ^ {
+        [self _invalidateOnSerialQueue];
+    });
+}
+
+- (BOOL)isValid
+{
+    return (self.fd != kInvalidPid);
+}
+
+#pragma mark - KVO
+
++ (NSSet *)keyPathsForValuesAffectingValueForKey:(NSString *)key
+{
+    NSMutableSet *keyPaths = [NSMutableSet setWithSet:[super keyPathsForValuesAffectingValueForKey:key]];
+
+    if ([key isEqualToString:@"valid"]) {
+        [keyPaths addObject:@"fd"];
+    }
+
+    return keyPaths;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+{
+    if (context == &_LLSocketConnectionValidObservationContext) {
+        BOOL oldValid = [change[NSKeyValueChangeOldKey] boolValue];
+        BOOL newValid = [change[NSKeyValueChangeNewKey] boolValue];
+        if ((oldValid && !newValid) && self.invalidationHandler) {
+            self.invalidationHandler();
+        }
+    } else {
+        [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+    }
+}
+
+#pragma mark - Private (Serial Queue)
+
+- (void)_startOnSerialQueue
 {
     NSAssert(NO, @"Cannot call on the base class");
 }
 
-- (void)suspend
+- (void)_invalidateOnSerialQueue
 {
     NSAssert(NO, @"Cannot call on the base class");
 }
@@ -65,7 +133,7 @@ static NSString *_createSocketPath(NSString *applicationGroupIdentifier, uint8_t
     /*
      * `sockaddr_un.sun_path` has a max length of 104 characters
      * However, the container URL for the application group identifier in the simulator is much longer than that
-     * Since the simulator have looser sandbox restrictions we just use /tmp
+     * Since the simulator has looser sandbox restrictions we just use /tmp
      */
 #if TARGET_IPHONE_SIMULATOR
     NSString *tempGroupLocation = [NSString stringWithFormat:@"/tmp/%@", applicationGroupIdentifier];
@@ -81,14 +149,12 @@ static NSString *_createSocketPath(NSString *applicationGroupIdentifier, uint8_t
 #endif /* TARGET_IPHONE_SIMULATOR */
 }
 
-static NSString * const kMessageNameKey = @"name";
-static NSString * const kMessageUserInfoKey = @"userInfo";
-
-static dispatch_data_t _createFramedMessageData(LLSocketMessage *message)
+static dispatch_data_t _createFramedMessageData(LLSocketMessage *message, LLSocketInfo *info)
 {
     NSMutableDictionary *content = [NSMutableDictionary dictionary];
-    [content setValue:message.name forKey:kMessageNameKey];
-    [content setValue:message.userInfo forKey:kMessageUserInfoKey];
+    [content setValue:message.name forKey:kLLSocketConnectionMessageNameKey];
+    [content setValue:message.userInfo forKey:kLLSocketConnectionMessageUserInfoKey];
+    [content setValue:info forKey:kLLSocketConnectionMessageConnectionInfoKey];
 
     NSMutableData *contentData = [NSMutableData data];
 
@@ -109,7 +175,7 @@ static dispatch_data_t _createFramedMessageData(LLSocketMessage *message)
     return message_data;
 }
 
-static LLSocketMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message)
+static LLSocketMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, LLSocketInfo **infoRef)
 {
     NSDictionary *content = nil;
     do {
@@ -117,10 +183,12 @@ static LLSocketMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message)
             break;
         }
 
-        NSInteger contentLength = [CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(message, (__bridge CFStringRef)@"Content-Length")) integerValue];
         NSData *bodyData = CFBridgingRelease(CFHTTPMessageCopyBody(message));
 
-        if (contentLength != (NSInteger)[bodyData length]) {
+        NSInteger contentLength = [CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(message, (__bridge CFStringRef)@"Content-Length")) integerValue];
+        NSInteger bodyLength = (NSInteger)[bodyData length];
+
+        if (contentLength != bodyLength) {
             break;
         }
 
@@ -130,20 +198,34 @@ static LLSocketMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message)
         @catch (...) {}
     } while (0);
 
-    return [LLSocketMessage messageWithName:content[kMessageNameKey] userInfo:content[kMessageUserInfoKey]];
+    if (!content) {
+        return nil;
+    }
+
+    if (infoRef != NULL) {
+        *infoRef = content[kLLSocketConnectionMessageConnectionInfoKey];
+    }
+    return [LLSocketMessage messageWithName:content[kLLSocketConnectionMessageNameKey] userInfo:content[kLLSocketConnectionMessageUserInfoKey]];
+}
+
+- (void)_completeReadingWithMessage:(LLSocketMessage *)message info:(LLSocketInfo *)info
+{
+    [self.delegate connection:self didReceiveMessage:message fromConnectionInfo:info];
 }
 
 @end
 
-#pragma mark -
+#pragma mark - LLSocketConnectionServer
 
 static const int kLLSocketServerConnectionsBacklog = 1024;
 
 @interface LLSocketConnectionServer ()
 
 @property (strong, nonatomic) dispatch_source_t listeningSource;
+
 @property (strong, nonatomic) NSMutableDictionary *fdToChannelMap;
-@property (strong, nonatomic) NSMutableDictionary *fdToMessageMap;
+@property (strong, nonatomic) NSMutableDictionary *infoToFdMap;
+@property (strong, nonatomic) NSMutableDictionary *fdToFramedMessageMap;
 
 @end
 
@@ -157,21 +239,38 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
     }
 
     _fdToChannelMap = [NSMutableDictionary dictionary];
-    _fdToMessageMap = [NSMutableDictionary dictionary];
+    _infoToFdMap = [NSMutableDictionary dictionary];
+    _fdToFramedMessageMap = [NSMutableDictionary dictionary];
 
     return self;
 }
 
-- (void)resume
+- (void)broadcastMessage:(LLSocketMessage *)message
 {
-    NSParameterAssert(self.fileDescriptor == -1);
+    dispatch_async(self.queue, ^ {
+        [self _broadcastMessageOnSerialQueue:message];
+    });
+}
 
-    dispatch_fd_t fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+- (void)sendMessage:(LLSocketMessage *)message toClient:(LLSocketInfo *)info
+{
+    dispatch_async(self.queue, ^ {
+        [self _sendMessageOnSerialQueue:message toClient:info];
+    });
+}
+
+#pragma mark - Private (Serial Queue)
+
+- (void)_startOnSerialQueue
+{
+    NSParameterAssert(self.fd == kInvalidPid);
+
+    dispatch_fd_t fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         return;
     }
 
-    self.fileDescriptor = fd;
+    self.fd = fd;
 
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
@@ -199,40 +298,126 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
     self.listeningSource = listeningSource;
 }
 
-- (void)suspend
+- (void)_invalidateOnSerialQueue
 {
-    unlink(self.socketPath.UTF8String);
-    self.socketPath = nil;
+    [self _cleanup];
 
-    close(self.fileDescriptor);
-    self.fileDescriptor = -1;
+    if (self.socketPath) {
+        unlink(self.socketPath.UTF8String);
+        self.socketPath = nil;
+    }
+
+    if (self.fd != kInvalidPid) {
+        close(self.fd);
+        self.fd = kInvalidPid;
+    }
 }
 
-- (void)broadcastMessage:(LLSocketMessage *)message
+- (void)_broadcastMessageOnSerialQueue:(LLSocketMessage *)message
 {
-    [self.fdToChannelMap enumerateKeysAndObjectsUsingBlock:^ (NSNumber *fd, dispatch_io_t channel, BOOL *stop) {
-        dispatch_data_t message_data = _createFramedMessageData(message);
-        dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {});
+    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLSocketInfo *info, NSNumber *fd, BOOL *stop) {
+        [self sendMessage:message toClient:info];
     }];
 }
 
-- (void)sendMessage:(LLSocketMessage *)message toClient:(LLSocketInfo *)info
+- (void)_sendMessageOnSerialQueue:(LLSocketMessage *)message toClient:(LLSocketInfo *)info
 {
+    dispatch_fd_t fd = [self.infoToFdMap[info] intValue];
+    dispatch_io_t channel = self.fdToChannelMap[@(fd)];
+    if (!channel) {
+        return;
+    }
 
+    dispatch_data_t message_data = _createFramedMessageData(message, info);
+    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {});
 }
 
 #pragma mark - Private
+
+static pid_t _findProcessIdentifierBehindSocket(dispatch_fd_t fd)
+{
+    pid_t pid;
+    socklen_t pid_len = sizeof(pid);
+
+    int retrieved = getsockopt(fd, SOL_LOCAL, LOCAL_PEERPID, &pid, &pid_len);
+    if (retrieved < 0) {
+        return kInvalidPid;
+    }
+
+    return pid;
+}
+
+static char *_findProcessNameForProcessIdentifier(pid_t pid)
+{
+    if (pid == kInvalidPid) {
+        return NULL;
+    }
+
+    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+    u_int mib_length = 4;
+    size_t size;
+    int st = sysctl(mib, mib_length, NULL, &size, NULL, 0);
+
+    char *proc_name = NULL;
+    struct kinfo_proc *process = NULL;
+
+    do {
+        size += size / 10;
+        struct kinfo_proc *new_process = realloc(process, size);
+        if (!new_process){
+            break;
+        }
+
+        process = new_process;
+        st = sysctl(mib, mib_length, process, &size, NULL, 0);
+
+        if (process->kp_proc.p_pid == pid) {
+            proc_name = process->kp_proc.p_comm;
+            break;
+        }
+
+    } while (st == -1 && errno == ENOMEM);
+
+    free(process);
+
+    return proc_name;
+}
+
+- (LLSocketInfo *)_findSocketInfo:(dispatch_fd_t)fd
+{
+    pid_t process_identifier = _findProcessIdentifierBehindSocket(fd);
+    char *process_name = _findProcessNameForProcessIdentifier(process_identifier);
+
+    if (process_identifier == kInvalidPid || process_name == NULL) {
+        return nil;
+    }
+
+    return [[LLSocketInfo alloc] initWithProcessName:[NSString stringWithUTF8String:process_name] processIdentifier:process_identifier];
+}
 
 - (void)_acceptNewConnection
 {
     struct sockaddr client_addr;
     socklen_t client_addrlen = sizeof(client_addr);
-    getpeername(self.fileDescriptor, &client_addr, &client_addrlen);
-    dispatch_fd_t client_fd = accept(self.fileDescriptor, &client_addr, &client_addrlen);
+    dispatch_fd_t client_fd = accept(self.fd, &client_addr, &client_addrlen);
+
     if (client_fd < 0) {
         return;
     }
-    getpeername(self.fileDescriptor, &client_addr, &client_addrlen);
+
+    BOOL accepted = NO;
+
+    LLSocketInfo *info = [self _findSocketInfo:client_fd];
+    if (info) {
+        accepted = [self.delegate server:self shouldAcceptNewConnection:info];
+    }
+
+    if (!accepted) {
+        close(client_fd);
+        return;
+    }
+
+    self.infoToFdMap[info] = @(client_fd);
     [self _setupChannelForNewConnection:client_fd];
 }
 
@@ -258,67 +443,99 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
 
 - (void)_readData:(dispatch_data_t)data fromConnection:(dispatch_fd_t)fd
 {
-    CFHTTPMessageRef message = (__bridge CFHTTPMessageRef)self.fdToMessageMap[@(fd)];
+    CFHTTPMessageRef framedMessage = (__bridge CFHTTPMessageRef)self.fdToFramedMessageMap[@(fd)];
 
-    if (data != nil && dispatch_data_get_size(data) != 0) {
-        if (!message) {
-            self.fdToMessageMap[@(fd)] = CFBridgingRelease(CFHTTPMessageCreateEmpty(kCFAllocatorDefault, false));
-            message = (__bridge CFHTTPMessageRef)self.fdToMessageMap[@(fd)];
+    if (data && dispatch_data_get_size(data) != 0) {
+        if (!framedMessage) {
+            self.fdToFramedMessageMap[@(fd)] = CFBridgingRelease(CFHTTPMessageCreateEmpty(kCFAllocatorDefault, false));
+            framedMessage = (__bridge CFHTTPMessageRef)self.fdToFramedMessageMap[@(fd)];
         }
 
         void const *bytes = NULL; size_t bytesLength = 0;
         dispatch_data_t contiguousData __attribute__((unused, objc_precise_lifetime)) = dispatch_data_create_map(data, &bytes, &bytesLength);
 
-        CFHTTPMessageAppendBytes(message, bytes, bytesLength);
+        CFHTTPMessageAppendBytes(framedMessage, bytes, bytesLength);
     }
 
-    if (CFHTTPMessageIsHeaderComplete(message)) {
-        NSInteger contentLength = [CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(message, CFSTR("Content-Length"))) integerValue];
-        NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(message)) length];
+    if (framedMessage && CFHTTPMessageIsHeaderComplete(framedMessage)) {
+        NSInteger contentLength = [CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(framedMessage, CFSTR("Content-Length"))) integerValue];
+        NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(framedMessage)) length];
 
         if (contentLength == bodyLength) {
-            LLSocketMessage *actualMessage = _createMessageFromHTTPMessage(message);
-            [self.fdToMessageMap removeObjectForKey:@(fd)];
-            [self _completeReadingWithMessage:actualMessage fromConnection:fd];
+            LLSocketInfo *info = nil;
+            LLSocketMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
+
+            [self.fdToFramedMessageMap removeObjectForKey:@(fd)];
+
+            [self _completeReadingWithMessage:message info:info];
         }
     }
 }
 
-- (void)_completeReadingWithMessage:(LLSocketMessage *)message fromConnection:(dispatch_fd_t)fd
-{
-    [self.delegate connection:self didReceiveMessage:message fromConnectionInfo:nil];
-}
-
 - (void)_cleanupConnection:(dispatch_fd_t)fd
 {
-    dispatch_io_t channel = self.fdToMessageMap[@(fd)];
-    dispatch_io_close(channel, DISPATCH_IO_STOP);
-    [self.fdToChannelMap removeObjectForKey:@(fd)];
+    dispatch_io_t channel = self.fdToChannelMap[@(fd)];
+    if (channel) {
+        dispatch_io_close(channel, DISPATCH_IO_STOP);
+        [self.fdToChannelMap removeObjectForKey:@(fd)];
+    }
+
+    __block LLSocketInfo *info = nil;
+    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLSocketInfo *connectionInfo, NSNumber *fileDescriptor, BOOL *stop) {
+        if (fileDescriptor.intValue == fd) {
+            info = connectionInfo;
+            *stop = YES;
+        }
+    }];
+
+    if (info) {
+        [self.infoToFdMap removeObjectForKey:info];
+    }
+}
+
+- (void)_cleanup
+{
+    for (dispatch_io_t channel in  self.fdToChannelMap.allValues) {
+        dispatch_io_close(channel, DISPATCH_IO_STOP);
+    }
+
+    [self.fdToChannelMap removeAllObjects];
+    [self.fdToFramedMessageMap removeAllObjects];
+    [self.infoToFdMap removeAllObjects];
 }
 
 @end
 
-#pragma mark -
+#pragma mark - LLSocketConnectionClient
 
 @interface LLSocketConnectionClient ()
 
 @property (strong, nonatomic) dispatch_io_t channel;
-@property (strong, nonatomic) id /* CFHTTPMessageRef */ message;
+@property (strong, nonatomic) id /* CFHTTPMessageRef */ framedMessage;
 
 @end
 
 @implementation LLSocketConnectionClient
 
-- (void)resume
+- (void)sendMessage:(LLSocketMessage *)message
 {
-    NSParameterAssert(self.fileDescriptor == -1);
+    dispatch_async(self.queue, ^ {
+        [self _sendMessageOnSerialQueue:message];
+    });
+}
 
-    dispatch_fd_t fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+#pragma mark - Private (Serial Queue)
+
+- (void)_startOnSerialQueue
+{
+    NSParameterAssert(self.fd == kInvalidPid);
+
+    dispatch_fd_t fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         return;
     }
 
-    self.fileDescriptor = fd;
+    self.fd = fd;
 
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
@@ -335,15 +552,22 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
     [self _setupChannel];
 }
 
-- (void)suspend
+- (void)_invalidateOnSerialQueue
 {
-    close(self.fileDescriptor);
-    self.fileDescriptor = -1;
+    if (self.channel) {
+        dispatch_io_close(self.channel, DISPATCH_IO_STOP);
+        self.channel = nil;
+    }
+
+    if (self.fd != kInvalidPid) {
+        close(self.fd);
+        self.fd = kInvalidPid;
+    }
 }
 
-- (void)sendMessage:(LLSocketMessage *)message
+- (void)_sendMessageOnSerialQueue:(LLSocketMessage *)message
 {
-    dispatch_data_t message_data = _createFramedMessageData(message);
+    dispatch_data_t message_data = _createFramedMessageData(message, self.info);
     dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {});
 }
 
@@ -351,7 +575,7 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
 
 - (void)_setupChannel
 {
-    dispatch_io_t channel = dispatch_io_create(DISPATCH_IO_STREAM, self.fileDescriptor, self.queue, ^ (int error) {});
+    dispatch_io_t channel = dispatch_io_create(DISPATCH_IO_STREAM, self.fd, self.queue, ^ (int error) {});
     dispatch_io_set_low_water(channel, 1);
     dispatch_io_set_high_water(channel, SIZE_MAX);
     self.channel = channel;
@@ -364,48 +588,40 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
         [self _readData:data];
 
         if (done) {
-            [self _cleanup];
+            [self invalidate];
         }
     });
 }
 
 - (void)_readData:(dispatch_data_t)data
 {
-    CFHTTPMessageRef message = (__bridge CFHTTPMessageRef)self.message;
+    CFHTTPMessageRef framedMessage = (__bridge CFHTTPMessageRef)self.framedMessage;
 
-    if (data != nil && dispatch_data_get_size(data) != 0) {
-        if (!self.message) {
-            self.message = CFBridgingRelease(CFHTTPMessageCreateEmpty(kCFAllocatorDefault, false));
-            message = (__bridge CFHTTPMessageRef)self.message;
+    if (data && dispatch_data_get_size(data) != 0) {
+        if (!self.framedMessage) {
+            self.framedMessage = CFBridgingRelease(CFHTTPMessageCreateEmpty(kCFAllocatorDefault, false));
+            framedMessage = (__bridge CFHTTPMessageRef)self.framedMessage;
         }
 
         void const *bytes = NULL; size_t bytesLength = 0;
         dispatch_data_t contiguousData __attribute__((unused, objc_precise_lifetime)) = dispatch_data_create_map(data, &bytes, &bytesLength);
 
-        CFHTTPMessageAppendBytes(message, bytes, bytesLength);
+        CFHTTPMessageAppendBytes(framedMessage, bytes, bytesLength);
     }
 
-    if (CFHTTPMessageIsHeaderComplete(message)) {
-        NSInteger contentLength = [CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(message, CFSTR("Content-Length"))) integerValue];
-        NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(message)) length];
+    if (framedMessage && CFHTTPMessageIsHeaderComplete(framedMessage)) {
+        NSInteger contentLength = [CFBridgingRelease(CFHTTPMessageCopyHeaderFieldValue(framedMessage, CFSTR("Content-Length"))) integerValue];
+        NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(framedMessage)) length];
 
         if (contentLength == bodyLength) {
-            LLSocketMessage *actualMessage = _createMessageFromHTTPMessage(message);
-            self.message = nil;
-            [self _completeReadingWithMessage:actualMessage];
+            LLSocketInfo *info = nil;
+            LLSocketMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
+
+            self.framedMessage = nil;
+
+            [self _completeReadingWithMessage:message info:info];
         }
     }
-}
-
-- (void)_completeReadingWithMessage:(LLSocketMessage *)message
-{
-    [self.delegate connection:self didReceiveMessage:message fromConnectionInfo:nil];
-}
-
-- (void)_cleanup
-{
-    dispatch_io_close(self.channel, DISPATCH_IO_STOP);
-    self.channel = nil;
 }
 
 @end

@@ -8,11 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
-@interface LLSocketInfo : NSObject
+@interface LLSocketInfo : NSObject <NSSecureCoding, NSCopying>
 
-- (id)initWithBundleIdentifier:(NSString *)bundleIdentifier processIdentifier:(pid_t)processIdentifier;
+- (id)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier;
 
-@property (readonly, copy, nonatomic) NSString *bundleIdentifier;
+@property (readonly, copy, nonatomic) NSString *processName;
 @property (readonly, assign, nonatomic) pid_t processIdentifier;
 
 @end
