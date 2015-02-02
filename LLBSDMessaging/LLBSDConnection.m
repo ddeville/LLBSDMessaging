@@ -220,10 +220,9 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSS
                 if (errorRef != NULL) {
                     *errorRef = [NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingDecodingError userInfo:@{NSLocalizedDescriptionKey : exception.reason}];
                 }
-                return nil;
+                break;
             }
             @throw exception;
-            return nil;
         }
     } while (0);
 
