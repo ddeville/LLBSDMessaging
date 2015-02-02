@@ -407,7 +407,11 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
     int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
     u_int mib_length = 4;
     size_t size;
-    __unused int st = sysctl(mib, mib_length, NULL, &size, NULL, 0);
+    int st = sysctl(mib, mib_length, NULL, &size, NULL, 0);
+
+    if (st == -1) {
+        return nil;
+    }
 
     char *proc_name = NULL;
     struct kinfo_proc *process = NULL;
@@ -430,7 +434,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
     } while (st == -1 && errno == ENOMEM);
 
     NSString *processName = (proc_name ? [NSString stringWithUTF8String:proc_name] : nil);
-    
+
     free(process);
 
     return processName;
