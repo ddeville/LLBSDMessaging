@@ -167,7 +167,7 @@
 
 /*!
     \brief
-    A concrete subclass of `LLBSDConnection` modelling a client that can connect and message to a single server.
+    A concrete subclass of `LLBSDConnection` modeling a client that can connect and message to a single server.
  */
 @interface LLBSDConnectionClient : LLBSDConnection
 
