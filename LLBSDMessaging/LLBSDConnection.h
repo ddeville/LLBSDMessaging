@@ -53,7 +53,7 @@
     \brief
     Initializes a new connection peer. Note that you should only initialize a concrete subclass of `LLBSDConnection`.
 
-    \param
+    \param applicationGroupIdentifier
     The identifier for an application group security container. You should have a `com.apple.security.application-groups` entitlement for this identifier
 
     \param connectionIdentifier
@@ -90,7 +90,7 @@
     \brief
     A handler that is invoked whenever the connection becomes invalid.
  */
-@property (copy) void (^invalidationHandler)(void);
+@property (copy, nonatomic) void (^invalidationHandler)(void);
 
 /*!
     \brief

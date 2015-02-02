@@ -238,12 +238,14 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSS
 
 - (void)_completeReadingWithError:(NSError *)error
 {
-    [self.delegate connection:self didFailToReceiveMessageWithError:error];
+    id <LLBSDConnectionDelegate> delegate = self.delegate;
+    [delegate connection:self didFailToReceiveMessageWithError:error];
 }
 
 - (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info
 {
-    [self.delegate connection:self didReceiveMessage:message fromProcess:info];
+    id <LLBSDConnectionDelegate> delegate = self.delegate;
+    [delegate connection:self didReceiveMessage:message fromProcess:info];
 }
 
 @end
@@ -323,7 +325,7 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
         return;
     }
 
-    dispatch_source_t listeningSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_READ, fd, 0, self.queue);
+    dispatch_source_t listeningSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_READ, (uintptr_t)fd, 0, self.queue);
     dispatch_source_set_event_handler(listeningSource, ^ {
         [self _acceptNewConnection];
     });
@@ -363,19 +365,19 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
         return;
     }
 
-    NSError *error = nil;
-    dispatch_data_t message_data = _createFramedMessageData(message, info, &error);
+    NSError *messageError = nil;
+    dispatch_data_t message_data = _createFramedMessageData(message, info, &messageError);
 
     if (!message_data) {
         if (completion) {
-            completion(error);
+            completion(messageError);
         }
         return;
     }
 
-    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {
+    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int write_error) {
         if (completion) {
-            completion((error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil] : nil));
+            completion((write_error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:write_error userInfo:nil] : nil));
         }
     });
 }
@@ -422,7 +424,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     char *proc_name = NULL;
 
-    for (int idx = 0; idx < (proc_list_len / sizeof(struct kinfo_proc)); idx++) {
+    for (size_t idx = 0; idx < (proc_list_len / sizeof(struct kinfo_proc)); idx++) {
         if (proc_list[idx].kp_proc.p_pid == pid) {
             proc_name = proc_list[idx].kp_proc.p_comm;
             break;
@@ -462,7 +464,8 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     LLBSDProcessInfo *info = [self _findSocketInfo:client_fd];
     if (info) {
-        accepted = [self.delegate server:self shouldAcceptNewConnection:info];
+        id <LLBSDConnectionServerDelegate> delegate = self.delegate;
+        accepted = [delegate server:self shouldAcceptNewConnection:info];
     }
 
     if (!accepted) {
@@ -507,7 +510,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
         void const *bytes = NULL; size_t bytesLength = 0;
         dispatch_data_t contiguousData __attribute__((unused, objc_precise_lifetime)) = dispatch_data_create_map(data, &bytes, &bytesLength);
 
-        CFHTTPMessageAppendBytes(framedMessage, bytes, bytesLength);
+        CFHTTPMessageAppendBytes(framedMessage, bytes, (CFIndex)bytesLength);
     }
 
     if (framedMessage && CFHTTPMessageIsHeaderComplete(framedMessage)) {
@@ -630,19 +633,19 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
         return;
     }
 
-    NSError *error = nil;
-    dispatch_data_t message_data = _createFramedMessageData(message, self.processInfo, &error);
+    NSError *messageError = nil;
+    dispatch_data_t message_data = _createFramedMessageData(message, self.processInfo, &messageError);
 
     if (!message_data) {
         if (completion) {
-            completion(error);
+            completion(messageError);
         }
         return;
     }
 
-    dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {
+    dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int write_error) {
         if (completion) {
-            completion((error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil] : nil));
+            completion((write_error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:write_error userInfo:nil] : nil));
         }
     });
 }
@@ -682,7 +685,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
         void const *bytes = NULL; size_t bytesLength = 0;
         dispatch_data_t contiguousData __attribute__((unused, objc_precise_lifetime)) = dispatch_data_create_map(data, &bytes, &bytesLength);
 
-        CFHTTPMessageAppendBytes(framedMessage, bytes, bytesLength);
+        CFHTTPMessageAppendBytes(framedMessage, bytes, (CFIndex)bytesLength);
     }
 
     if (framedMessage && CFHTTPMessageIsHeaderComplete(framedMessage)) {

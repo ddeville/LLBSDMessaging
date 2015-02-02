@@ -44,7 +44,7 @@ static NSString * const kLLBSDInfoProcessIdentifierKey = @"processIdentifier";
 
 - (NSUInteger)hash
 {
-    return (self.processName.hash ^ self.processIdentifier);
+    return (self.processName.hash ^ (NSUInteger)self.processIdentifier);
 }
 
 #pragma mark - NSCopying
