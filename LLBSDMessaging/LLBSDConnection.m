@@ -42,7 +42,7 @@ static const pid_t kInvalidPid = -1;
 
 static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionValidObservationContext";
 
-- (id)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
+- (instancetype)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
 {
     NSAssert(![self isMemberOfClass:[LLBSDConnection class]], @"Cannot instantiate the base class");
     
@@ -267,7 +267,7 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
 
 @implementation LLBSDConnectionServer
 
-- (id)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
+- (instancetype)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
 {
     self = [super initWithApplicationGroupIdentifier:applicationGroupIdentifier connectionIdentifier:connectionIdentifier];
     if (self == nil) {

@@ -8,12 +8,12 @@
 
 #import "LLBSDProcessInfo.h"
 
-static NSString * const LLBSDInfoProcessNameKey = @"processName";
-static NSString * const LLBSDInfoProcessIdentifierKey = @"processIdentifier";
+static NSString * const kLLBSDInfoProcessNameKey = @"processName";
+static NSString * const kLLBSDInfoProcessIdentifierKey = @"processIdentifier";
 
 @implementation LLBSDProcessInfo
 
-- (id)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier
+- (instancetype)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier
 {
     self = [self init];
     if (self == nil) {
@@ -68,16 +68,16 @@ static NSString * const LLBSDInfoProcessIdentifierKey = @"processIdentifier";
         return nil;
     }
 
-    _processName = [decoder decodeObjectOfClass:[NSString class] forKey:LLBSDInfoProcessNameKey];
-    _processIdentifier = [[decoder decodeObjectOfClass:[NSNumber class] forKey:LLBSDInfoProcessIdentifierKey] intValue];
+    _processName = [decoder decodeObjectOfClass:[NSString class] forKey:kLLBSDInfoProcessNameKey];
+    _processIdentifier = [[decoder decodeObjectOfClass:[NSNumber class] forKey:kLLBSDInfoProcessIdentifierKey] intValue];
 
     return self;
 }
 
 - (void)encodeWithCoder:(NSCoder *)encoder
 {
-    [encoder encodeObject:[self processName] forKey:LLBSDInfoProcessNameKey];
-    [encoder encodeObject:@([self processIdentifier]) forKey:LLBSDInfoProcessIdentifierKey];
+    [encoder encodeObject:[self processName] forKey:kLLBSDInfoProcessNameKey];
+    [encoder encodeObject:@([self processIdentifier]) forKey:kLLBSDInfoProcessIdentifierKey];
 }
 
 @end

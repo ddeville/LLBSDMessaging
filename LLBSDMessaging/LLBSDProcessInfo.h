@@ -20,7 +20,7 @@
     \param processIdentifier
     The identifier of the process aka pid.
  */
-- (id)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier;
+- (instancetype)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier;
 
 /*!
     \brief
