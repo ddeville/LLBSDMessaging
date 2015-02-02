@@ -45,7 +45,7 @@
 
 /*!
     \brief
-    An abstract class representing a connection peer.
+    An abstract class representing a connection peer. Delegate methods and completion blocks will be called on any thread.
  */
 @interface LLBSDConnection : NSObject
 
