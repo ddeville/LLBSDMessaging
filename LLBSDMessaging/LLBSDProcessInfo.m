@@ -49,7 +49,7 @@ static NSString * const kLLBSDInfoProcessIdentifierKey = @"processIdentifier";
 
 #pragma mark - NSCopying
 
-- (id)copyWithZone:(NSZone *)zone
+- (id)copyWithZone:(__unused NSZone *)zone
 {
     return [[[self class] alloc] initWithProcessName:self.processName processIdentifier:self.processIdentifier];
 }

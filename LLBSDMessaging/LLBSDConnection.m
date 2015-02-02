@@ -350,9 +350,9 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
 
 - (void)_broadcastMessageOnSerialQueue:(LLBSDMessage *)message completion:(void (^)(NSError *error))completion
 {
-    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLBSDProcessInfo *info, NSNumber *fd, BOOL *stop) {
+    for (LLBSDProcessInfo *info in self.infoToFdMap.allKeys) {
         [self sendMessage:message toClient:info completion:completion];
-    }];
+    }
 }
 
 - (void)_sendMessageOnSerialQueue:(LLBSDMessage *)message toClient:(LLBSDProcessInfo *)info completion:(void (^)(NSError *error))completion
@@ -375,8 +375,8 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
         return;
     }
 
-    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int write_error) {
-        if (completion) {
+    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, __unused dispatch_data_t data, int write_error) {
+        if (done && completion) {
             completion((write_error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:write_error userInfo:nil] : nil));
         }
     });
@@ -479,7 +479,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
 - (void)_setupChannelForNewConnection:(dispatch_fd_t)fd
 {
-    dispatch_io_t channel = dispatch_io_create(DISPATCH_IO_STREAM, fd, self.queue, ^ (int error) {});
+    dispatch_io_t channel = dispatch_io_create(DISPATCH_IO_STREAM, fd, self.queue, ^ (__unused int error) {});
     dispatch_io_set_low_water(channel, 1);
     dispatch_io_set_high_water(channel, SIZE_MAX);
     self.fdToChannelMap[@(fd)] = channel;
@@ -643,8 +643,8 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
         return;
     }
 
-    dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int write_error) {
-        if (completion) {
+    dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, __unused dispatch_data_t data, int write_error) {
+        if (done && completion) {
             completion((write_error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:write_error userInfo:nil] : nil));
         }
     });
@@ -654,7 +654,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
 - (void)_setupChannel
 {
-    dispatch_io_t channel = dispatch_io_create(DISPATCH_IO_STREAM, self.fd, self.queue, ^ (int error) {});
+    dispatch_io_t channel = dispatch_io_create(DISPATCH_IO_STREAM, self.fd, self.queue, ^ (__unused int error) {});
     dispatch_io_set_low_water(channel, 1);
     dispatch_io_set_high_water(channel, SIZE_MAX);
     self.channel = channel;
