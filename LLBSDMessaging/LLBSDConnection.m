@@ -63,9 +63,7 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
 
 - (void)dealloc
 {
-    /*
-     * Note: By removing the observer before invalidating we ensure that the invalidation handler is not invoked.
-     */
+    // By removing the observer before invalidating we ensure that the invalidation handler is not invoked.
     [self removeObserver:self forKeyPath:@"valid" context:&_LLBSDConnectionValidObservationContext];
     [self invalidate];
 }
