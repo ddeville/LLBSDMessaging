@@ -398,7 +398,7 @@ static pid_t _findProcessIdentifierBehindSocket(dispatch_fd_t fd)
     return pid;
 }
 
-static char *_findProcessNameForProcessIdentifier(pid_t pid)
+static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 {
     if (pid == kInvalidPid) {
         return NULL;
@@ -407,7 +407,7 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
     int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
     u_int mib_length = 4;
     size_t size;
-    int st = sysctl(mib, mib_length, NULL, &size, NULL, 0);
+    __unused int st = sysctl(mib, mib_length, NULL, &size, NULL, 0);
 
     char *proc_name = NULL;
     struct kinfo_proc *process = NULL;
@@ -429,21 +429,23 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
 
     } while (st == -1 && errno == ENOMEM);
 
+    NSString *processName = (proc_name ? [NSString stringWithUTF8String:proc_name] : nil);
+    
     free(process);
 
-    return proc_name;
+    return processName;
 }
 
 - (LLBSDProcessInfo *)_findSocketInfo:(dispatch_fd_t)fd
 {
-    pid_t process_identifier = _findProcessIdentifierBehindSocket(fd);
-    char *process_name = _findProcessNameForProcessIdentifier(process_identifier);
+    pid_t processIdentifier = _findProcessIdentifierBehindSocket(fd);
+    NSString *processName = _findProcessNameForProcessIdentifier(processIdentifier);
 
-    if (process_identifier == kInvalidPid || process_name == NULL) {
+    if (processIdentifier == kInvalidPid || processName == nil) {
         return nil;
     }
 
-    return [[LLBSDProcessInfo alloc] initWithProcessName:[NSString stringWithUTF8String:process_name] processIdentifier:process_identifier];
+    return [[LLBSDProcessInfo alloc] initWithProcessName:processName processIdentifier:processIdentifier];
 }
 
 - (void)_acceptNewConnection
