@@ -110,6 +110,8 @@
 
 @protocol LLBSDConnectionServerDelegate <LLBSDConnectionDelegate>
 
+@required
+
 /*!
     \brief
     This method is called whenever a client attempts to connect to the server. Returning NO will deny the connection.
