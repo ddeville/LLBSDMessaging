@@ -12,6 +12,8 @@
 
 + (instancetype)messageWithName:(NSString *)name userInfo:(NSDictionary *)userInfo
 {
+    NSParameterAssert(name);
+    
     LLBSDMessage *message = [[LLBSDMessage alloc] init];
     message.name = name;
     message.userInfo = userInfo;

@@ -15,6 +15,7 @@
 
 #import "LLBSDProcessInfo.h"
 #import "LLBSDMessage.h"
+#import "LLBSDMessaging-Constants.h"
 
 static NSString * const kLLBSDConnectionMessageNameKey = @"name";
 static NSString * const kLLBSDConnectionMessageUserInfoKey = @"userInfo";
@@ -149,7 +150,7 @@ static NSString *_createSocketPath(NSString *applicationGroupIdentifier, uint8_t
 #endif /* TARGET_IPHONE_SIMULATOR */
 }
 
-static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProcessInfo *info)
+static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProcessInfo *info, NSError **errorRef)
 {
     NSMutableDictionary *content = [NSMutableDictionary dictionary];
     [content setValue:message.name forKey:kLLBSDConnectionMessageNameKey];
@@ -161,8 +162,21 @@ static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProc
     NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:contentData];
     archiver.requiresSecureCoding = YES;
 
-    [archiver encodeObject:content forKey:NSKeyedArchiveRootObjectKey];
-    [archiver finishEncoding];
+    @try {
+        [archiver encodeObject:content forKey:NSKeyedArchiveRootObjectKey];
+        [archiver finishEncoding];
+    }
+    @catch (NSException *exception) {
+        [archiver finishEncoding];
+        if ([exception.name isEqualToString:NSInvalidUnarchiveOperationException]) {
+            if (errorRef != NULL) {
+                *errorRef = [NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingEncodingError userInfo:@{NSLocalizedDescriptionKey : exception.reason}];
+            }
+            return NULL;
+        }
+        @throw exception;
+        return NULL;
+    }
 
     CFHTTPMessageRef response = CFHTTPMessageCreateResponse(kCFAllocatorDefault, 200, NULL, kCFHTTPVersion1_1);
     CFHTTPMessageSetHeaderFieldValue(response, (__bridge CFStringRef)@"Content-Length", (__bridge CFStringRef)[NSString stringWithFormat:@"%ld", (unsigned long)[contentData length]]);
@@ -175,7 +189,7 @@ static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProc
     return message_data;
 }
 
-static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, LLBSDProcessInfo **infoRef)
+static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSSet *allowedClasses, LLBSDProcessInfo **infoRef, NSError **errorRef)
 {
     NSDictionary *content = nil;
     do {
@@ -192,10 +206,27 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, LLB
             break;
         }
 
+        NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:bodyData];
+        unarchiver.requiresSecureCoding = YES;
+
+        NSSet *classes = [NSSet setWithObjects:[NSDictionary class], [NSString class], [NSNumber class], [LLBSDProcessInfo class], nil];
+        classes = [classes setByAddingObjectsFromSet:allowedClasses];
+
         @try {
-            content = [NSKeyedUnarchiver unarchiveObjectWithData:bodyData];
+            content = [unarchiver decodeObjectOfClasses:classes forKey:NSKeyedArchiveRootObjectKey];
+            [unarchiver finishDecoding];
         }
-        @catch (...) {}
+        @catch (NSException *exception) {
+            [unarchiver finishDecoding];
+            if ([exception.name isEqualToString:NSInvalidUnarchiveOperationException]) {
+                if (errorRef != NULL) {
+                    *errorRef = [NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingDecodingError userInfo:@{NSLocalizedDescriptionKey : exception.reason}];
+                }
+                return nil;
+            }
+            @throw exception;
+            return nil;
+        }
     } while (0);
 
     if (!content) {
@@ -206,6 +237,11 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, LLB
         *infoRef = content[kLLBSDConnectionMessageConnectionInfoKey];
     }
     return [LLBSDMessage messageWithName:content[kLLBSDConnectionMessageNameKey] userInfo:content[kLLBSDConnectionMessageUserInfoKey]];
+}
+
+- (void)_completeReadingWithError:(NSError *)error
+{
+
 }
 
 - (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info
@@ -324,11 +360,22 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
 {
     dispatch_fd_t fd = [self.infoToFdMap[info] intValue];
     dispatch_io_t channel = self.fdToChannelMap[@(fd)];
+
     if (!channel) {
+        completion([NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingInvalidChannelError userInfo:nil]);
         return;
     }
 
-    dispatch_data_t message_data = _createFramedMessageData(message, info);
+    NSError *error = nil;
+    dispatch_data_t message_data = _createFramedMessageData(message, info, &error);
+
+    if (!message_data) {
+        if (completion) {
+            completion(error);
+        }
+        return;
+    }
+
     dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {
         if (completion) {
             completion((error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil] : nil));
@@ -466,12 +513,17 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
         NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(framedMessage)) length];
 
         if (contentLength == bodyLength) {
+            NSError *error = nil;
             LLBSDProcessInfo *info = nil;
-            LLBSDMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
+            LLBSDMessage *message = _createMessageFromHTTPMessage(framedMessage, self.allowedMessageClasses, &info, &error);
 
             [self.fdToFramedMessageMap removeObjectForKey:@(fd)];
 
-            [self _completeReadingWithMessage:message info:info];
+            if (message) {
+                [self _completeReadingWithMessage:message info:info];
+            } else {
+                [self _completeReadingWithError:error];
+            }
         }
     }
 }
@@ -571,7 +623,21 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
 
 - (void)_sendMessageOnSerialQueue:(LLBSDMessage *)message completion:(void (^)(NSError *error))completion
 {
-    dispatch_data_t message_data = _createFramedMessageData(message, self.info);
+    if (!self.channel) {
+        completion([NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingInvalidChannelError userInfo:nil]);
+        return;
+    }
+
+    NSError *error = nil;
+    dispatch_data_t message_data = _createFramedMessageData(message, self.info, &error);
+
+    if (!message_data) {
+        if (completion) {
+            completion(error);
+        }
+        return;
+    }
+
     dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {
         if (completion) {
             completion((error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil] : nil));
@@ -622,12 +688,17 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
         NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(framedMessage)) length];
 
         if (contentLength == bodyLength) {
+            NSError *error = nil;
             LLBSDProcessInfo *info = nil;
-            LLBSDMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
+            LLBSDMessage *message = _createMessageFromHTTPMessage(framedMessage, self.allowedMessageClasses, &info, &error);
 
             self.framedMessage = nil;
 
-            [self _completeReadingWithMessage:message info:info];
+            if (message) {
+                [self _completeReadingWithMessage:message info:info];
+            } else {
+                [self _completeReadingWithError:error];
+            }
         }
     }
 }

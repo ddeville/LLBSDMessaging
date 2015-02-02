@@ -14,6 +14,10 @@ extern NSString * const LLBSDMessagingErrorDomain;
 
 typedef NS_ENUM(NSInteger, LLBSDMessagingErrorCode) {
     LLBSDMessagingUnknownError = 0,
+
+    LLBSDMessagingEncodingError = -100,
+    LLBSDMessagingDecodingError = -101,
+    LLBSDMessagingInvalidChannelError = -102,
 };
 
 FOUNDATION_EXPORT double LLBSDMessagingVersionNumber;

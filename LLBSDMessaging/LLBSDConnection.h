@@ -17,6 +17,13 @@
  */
 - (void)connection:(LLBSDConnection *)connection didReceiveMessage:(LLBSDMessage *)message fromProcess:(LLBSDProcessInfo *)processInfo;
 
+@optional
+
+/*!
+    \brief
+ */
+- (void)connection:(LLBSDConnection *)connection didFailToReceiveMessageWithError:(NSError *)error;
+
 @end
 
 /*!
@@ -60,6 +67,11 @@
     \brief
  */
 @property (readonly, strong, nonatomic) LLBSDProcessInfo *info;
+
+/*!
+    \brief
+ */
+@property (strong, nonatomic) NSSet *allowedMessageClasses;
 
 @end
 
