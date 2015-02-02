@@ -406,18 +406,18 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     static const int name[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
 
-    size_t length = 0;
+    size_t proc_list_len = 0;
 
     // Use an empty buffer to get the length to allocate
-    int length_retrieved = sysctl((int *)name, (sizeof(name) / sizeof(*name)) - 1, NULL, &length, NULL, 0);
+    int length_retrieved = sysctl((int *)name, (sizeof(name) / sizeof(*name)) - 1, NULL, &proc_list_len, NULL, 0);
     if (length_retrieved != 0) {
         return nil;
     }
 
-    struct kinfo_proc *proc_list = malloc(length);
+    struct kinfo_proc *proc_list = malloc(proc_list_len);
 
     // Retrieve the process list now that we have allocated a buffer of the correct length
-    int list_retrieved = sysctl((int *)name, (sizeof(name) / sizeof(*name)) - 1, proc_list, &length, NULL, 0);
+    int list_retrieved = sysctl((int *)name, (sizeof(name) / sizeof(*name)) - 1, proc_list, &proc_list_len, NULL, 0);
     if (list_retrieved != 0) {
         free(proc_list);
         return nil;
@@ -425,7 +425,7 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     char *proc_name = NULL;
 
-    for (int idx = 0; idx < (length / sizeof(struct kinfo_proc)); idx++) {
+    for (int idx = 0; idx < (proc_list_len / sizeof(struct kinfo_proc)); idx++) {
         if (proc_list[idx].kp_proc.p_pid == pid) {
             proc_name = proc_list[idx].kp_proc.p_comm;
             break;
