@@ -2,8 +2,8 @@
 
 ### Interprocess communication via Berkeley sockets on iOS
 
-- Mach ports available on iOS but the mach bootstrap server is not available so we cannot register custom ports
-- Also, even if we could XPC and `NSMachPort` are not available so it could be quite painful
+- Mach ports are technically available on iOS but the mach bootstrap server is not available so we cannot register custom ports
+- Also, even if we could, XPC and `NSMachPort` are not available so it could be quite painful
 - Since iOS 8, applications from the same group can share a directory on the file system
 - iOS is built on top of Unix
 - In Unix, everything is a file!
