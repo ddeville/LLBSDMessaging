@@ -236,16 +236,20 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSS
     return [LLBSDMessage messageWithName:content[kLLBSDConnectionMessageNameKey] userInfo:content[kLLBSDConnectionMessageUserInfoKey]];
 }
 
-- (void)_completeReadingWithError:(NSError *)error
-{
-    id <LLBSDConnectionDelegate> delegate = self.delegate;
-    [delegate connection:self didFailToReceiveMessageWithError:error];
-}
-
 - (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info
 {
-    id <LLBSDConnectionDelegate> delegate = self.delegate;
-    [delegate connection:self didReceiveMessage:message fromProcess:info];
+    __strong id <LLBSDConnectionDelegate> delegate = self.delegate;
+    if ([delegate respondsToSelector:@selector(connection:didReceiveMessage:fromProcess:)]) {
+        [delegate connection:self didReceiveMessage:message fromProcess:info];
+    }
+}
+
+- (void)_completeReadingWithError:(NSError *)error
+{
+    __strong id <LLBSDConnectionDelegate> delegate = self.delegate;
+    if ([delegate respondsToSelector:@selector(connection:didFailToReceiveMessageWithError:)]) {
+        [delegate connection:self didFailToReceiveMessageWithError:error];
+    }
 }
 
 @end

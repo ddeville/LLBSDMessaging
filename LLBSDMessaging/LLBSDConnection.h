@@ -12,6 +12,8 @@
 
 @protocol LLBSDConnectionDelegate <NSObject>
 
+@optional
+
 /*!
     \brief
     This method is called whenever a message is successfully received by the connection peer.
@@ -26,8 +28,6 @@
     The info about the process that sent the message.
  */
 - (void)connection:(LLBSDConnection *)connection didReceiveMessage:(LLBSDMessage *)message fromProcess:(LLBSDProcessInfo *)processInfo;
-
-@optional
 
 /*!
     \brief
