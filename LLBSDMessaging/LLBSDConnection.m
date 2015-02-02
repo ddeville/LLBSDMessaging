@@ -54,7 +54,7 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
     _fd = kInvalidPid;
     _socketPath = _createSocketPath(applicationGroupIdentifier, connectionIdentifier);
     _queue = dispatch_queue_create("com.ddeville.llbsdmessaging.serial-queue", DISPATCH_QUEUE_SERIAL);
-    _info = [[LLBSDProcessInfo alloc] initWithProcessName:[[NSProcessInfo processInfo] processName] processIdentifier:[[NSProcessInfo processInfo] processIdentifier]];
+    _processInfo = [[LLBSDProcessInfo alloc] initWithProcessName:[[NSProcessInfo processInfo] processName] processIdentifier:[[NSProcessInfo processInfo] processIdentifier]];
 
     [self addObserver:self forKeyPath:@"valid" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&_LLBSDConnectionValidObservationContext];
 
@@ -64,7 +64,7 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
 - (void)dealloc
 {
     /*
-        Note: By removing the observer before invalidating we ensure that the invalidation handler is not invoked.
+     * Note: By removing the observer before invalidating we ensure that the invalidation handler is not invoked.
      */
     [self removeObserver:self forKeyPath:@"valid" context:&_LLBSDConnectionValidObservationContext];
     [self invalidate];
@@ -629,7 +629,7 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
     }
 
     NSError *error = nil;
-    dispatch_data_t message_data = _createFramedMessageData(message, self.info, &error);
+    dispatch_data_t message_data = _createFramedMessageData(message, self.processInfo, &error);
 
     if (!message_data) {
         if (completion) {

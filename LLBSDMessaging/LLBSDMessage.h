@@ -16,7 +16,7 @@
 
     \param name
     Required. The name that identifies the message.
-    
+
     \param userInfo
     Optional. A dictionary containing extra information. Keys and values need to conform to `NSSecureCoding`.
  */

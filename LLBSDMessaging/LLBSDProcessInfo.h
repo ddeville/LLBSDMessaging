@@ -13,10 +13,10 @@
 /*!
     \brief
     A class identifying a process that can send or receive messages on a `LLBSDConnection`.
-    
+
     \param processName
     The name of the process as seen in the process table.
-    
+
     \param processIdentifier
     The identifier of the process aka pid.
  */
