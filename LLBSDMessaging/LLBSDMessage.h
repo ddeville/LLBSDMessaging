@@ -31,6 +31,7 @@
 /*!
     \brief
     Optional. A dictionary containing extra information. Keys and values need to conform to `NSSecureCoding`.
+    When using special classes, make sure to add it to the `allowedMessageClasses` property on `LLBSDConnection`.
  */
 @property (strong, nonatomic) NSDictionary *userInfo;
 
