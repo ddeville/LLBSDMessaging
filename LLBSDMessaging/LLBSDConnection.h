@@ -126,7 +126,7 @@
 
 /*!
     \brief
-    A concrete subclass of `LLBSDConnection` modelling a server that can listen and message to multiple clients.
+    A concrete subclass of `LLBSDConnection` modeling a server that can listen and message to multiple clients.
  */
 @interface LLBSDConnectionServer : LLBSDConnection
 
