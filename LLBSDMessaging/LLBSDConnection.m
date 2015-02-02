@@ -238,7 +238,7 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSS
 
 - (void)_completeReadingWithError:(NSError *)error
 {
-
+    [self.delegate connection:self didFailToReceiveMessageWithError:error];
 }
 
 - (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info
