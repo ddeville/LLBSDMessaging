@@ -1,17 +1,17 @@
 //
-//  LLSocketConnectionInfo.m
-//  LLMessaging
+//  LLBSDConnectionInfo.m
+//  LLBSDMessaging
 //
 //  Created by Damien DeVille on 2/1/15.
 //  Copyright (c) 2015 Damien DeVille. All rights reserved.
 //
 
-#import "LLSocketInfo.h"
+#import "LLBSDProcessInfo.h"
 
-static NSString * const LLSocketInfoProcessNameKey = @"processName";
-static NSString * const LLSocketInfoProcessIdentifierKey = @"processIdentifier";
+static NSString * const LLBSDInfoProcessNameKey = @"processName";
+static NSString * const LLBSDInfoProcessIdentifierKey = @"processIdentifier";
 
-@implementation LLSocketInfo
+@implementation LLBSDProcessInfo
 
 - (id)initWithProcessName:(NSString *)processName processIdentifier:(pid_t)processIdentifier
 {
@@ -28,7 +28,7 @@ static NSString * const LLSocketInfoProcessIdentifierKey = @"processIdentifier";
 
 #pragma mark - NSObject
 
-- (BOOL)isEqual:(LLSocketInfo *)object
+- (BOOL)isEqual:(LLBSDProcessInfo *)object
 {
     if ([self class] != [object class]) {
         return NO;
@@ -68,16 +68,16 @@ static NSString * const LLSocketInfoProcessIdentifierKey = @"processIdentifier";
         return nil;
     }
 
-    _processName = [decoder decodeObjectOfClass:[NSString class] forKey:LLSocketInfoProcessNameKey];
-    _processIdentifier = [[decoder decodeObjectOfClass:[NSNumber class] forKey:LLSocketInfoProcessIdentifierKey] intValue];
+    _processName = [decoder decodeObjectOfClass:[NSString class] forKey:LLBSDInfoProcessNameKey];
+    _processIdentifier = [[decoder decodeObjectOfClass:[NSNumber class] forKey:LLBSDInfoProcessIdentifierKey] intValue];
 
     return self;
 }
 
 - (void)encodeWithCoder:(NSCoder *)encoder
 {
-    [encoder encodeObject:[self processName] forKey:LLSocketInfoProcessNameKey];
-    [encoder encodeObject:@([self processIdentifier]) forKey:LLSocketInfoProcessIdentifierKey];
+    [encoder encodeObject:[self processName] forKey:LLBSDInfoProcessNameKey];
+    [encoder encodeObject:@([self processIdentifier]) forKey:LLBSDInfoProcessIdentifierKey];
 }
 
 @end

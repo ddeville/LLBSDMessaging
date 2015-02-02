@@ -1,18 +1,18 @@
 //
-//  LLSocketMessage.m
-//  LLMessaging
+//  LLBSDMessage.m
+//  LLBSDMessaging
 //
 //  Created by Damien DeVille on 2/1/15.
 //  Copyright (c) 2015 Damien DeVille. All rights reserved.
 //
 
-#import "LLSocketMessage.h"
+#import "LLBSDMessage.h"
 
-@implementation LLSocketMessage
+@implementation LLBSDMessage
 
 + (instancetype)messageWithName:(NSString *)name userInfo:(NSDictionary *)userInfo
 {
-    LLSocketMessage *message = [[LLSocketMessage alloc] init];
+    LLBSDMessage *message = [[LLBSDMessage alloc] init];
     message.name = name;
     message.userInfo = userInfo;
     return message;

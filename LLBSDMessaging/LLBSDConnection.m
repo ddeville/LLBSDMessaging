@@ -1,30 +1,30 @@
 //
-//  LLSocketConnection.m
-//  LLMessaging
+//  LLBSDConnection.m
+//  LLBSDMessaging
 //
 //  Created by Damien DeVille on 1/31/15.
 //  Copyright (c) 2015 Damien DeVille. All rights reserved.
 //
 
-#import "LLSocketConnection.h"
+#import "LLBSDConnection.h"
 
 #import <sys/socket.h>
 #import <sys/sysctl.h>
 #import <sys/un.h>
 #import <TargetConditionals.h>
 
-#import "LLSocketInfo.h"
-#import "LLSocketMessage.h"
+#import "LLBSDProcessInfo.h"
+#import "LLBSDMessage.h"
 
-static NSString * const kLLSocketConnectionMessageNameKey = @"name";
-static NSString * const kLLSocketConnectionMessageUserInfoKey = @"userInfo";
-static NSString * const kLLSocketConnectionMessageConnectionInfoKey = @"connectionInfo";
+static NSString * const kLLBSDConnectionMessageNameKey = @"name";
+static NSString * const kLLBSDConnectionMessageUserInfoKey = @"userInfo";
+static NSString * const kLLBSDConnectionMessageConnectionInfoKey = @"connectionInfo";
 
 static const pid_t kInvalidPid = -1;
 
-#pragma mark - LLSocketConnection
+#pragma mark - LLBSDConnection
 
-@interface LLSocketConnection ()
+@interface LLBSDConnection ()
 
 @property (assign, nonatomic) NSString *socketPath;
 @property (assign, nonatomic) dispatch_fd_t fd;
@@ -33,17 +33,17 @@ static const pid_t kInvalidPid = -1;
 
 - (void)_startOnSerialQueue;
 - (void)_invalidateOnSerialQueue;
-- (void)_completeReadingWithMessage:(LLSocketMessage *)message info:(LLSocketInfo *)info;
+- (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info;
 
 @end
 
-@implementation LLSocketConnection
+@implementation LLBSDConnection
 
-static NSString *_LLSocketConnectionValidObservationContext = @"_LLSocketConnectionValidObservationContext";
+static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionValidObservationContext";
 
 - (id)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
 {
-    NSAssert(![self isMemberOfClass:[LLSocketConnection class]], @"Cannot instantiate the base class");
+    NSAssert(![self isMemberOfClass:[LLBSDConnection class]], @"Cannot instantiate the base class");
     
     self = [self init];
     if (self == nil) {
@@ -52,10 +52,10 @@ static NSString *_LLSocketConnectionValidObservationContext = @"_LLSocketConnect
 
     _fd = kInvalidPid;
     _socketPath = _createSocketPath(applicationGroupIdentifier, connectionIdentifier);
-    _queue = dispatch_queue_create("com.ddeville.llmessaging.serial-queue", DISPATCH_QUEUE_SERIAL);
-    _info = [[LLSocketInfo alloc] initWithProcessName:[[NSProcessInfo processInfo] processName] processIdentifier:[[NSProcessInfo processInfo] processIdentifier]];
+    _queue = dispatch_queue_create("com.ddeville.llbsdmessaging.serial-queue", DISPATCH_QUEUE_SERIAL);
+    _info = [[LLBSDProcessInfo alloc] initWithProcessName:[[NSProcessInfo processInfo] processName] processIdentifier:[[NSProcessInfo processInfo] processIdentifier]];
 
-    [self addObserver:self forKeyPath:@"valid" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&_LLSocketConnectionValidObservationContext];
+    [self addObserver:self forKeyPath:@"valid" options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew) context:&_LLBSDConnectionValidObservationContext];
 
     return self;
 }
@@ -65,7 +65,7 @@ static NSString *_LLSocketConnectionValidObservationContext = @"_LLSocketConnect
     /*
         Note: By removing the observer before invalidating we ensure that the invalidation handler is not invoked.
      */
-    [self removeObserver:self forKeyPath:@"valid" context:&_LLSocketConnectionValidObservationContext];
+    [self removeObserver:self forKeyPath:@"valid" context:&_LLBSDConnectionValidObservationContext];
     [self invalidate];
 }
 
@@ -103,7 +103,7 @@ static NSString *_LLSocketConnectionValidObservationContext = @"_LLSocketConnect
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-    if (context == &_LLSocketConnectionValidObservationContext) {
+    if (context == &_LLBSDConnectionValidObservationContext) {
         BOOL oldValid = [change[NSKeyValueChangeOldKey] boolValue];
         BOOL newValid = [change[NSKeyValueChangeNewKey] boolValue];
         if ((oldValid && !newValid) && self.invalidationHandler) {
@@ -149,12 +149,12 @@ static NSString *_createSocketPath(NSString *applicationGroupIdentifier, uint8_t
 #endif /* TARGET_IPHONE_SIMULATOR */
 }
 
-static dispatch_data_t _createFramedMessageData(LLSocketMessage *message, LLSocketInfo *info)
+static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProcessInfo *info)
 {
     NSMutableDictionary *content = [NSMutableDictionary dictionary];
-    [content setValue:message.name forKey:kLLSocketConnectionMessageNameKey];
-    [content setValue:message.userInfo forKey:kLLSocketConnectionMessageUserInfoKey];
-    [content setValue:info forKey:kLLSocketConnectionMessageConnectionInfoKey];
+    [content setValue:message.name forKey:kLLBSDConnectionMessageNameKey];
+    [content setValue:message.userInfo forKey:kLLBSDConnectionMessageUserInfoKey];
+    [content setValue:info forKey:kLLBSDConnectionMessageConnectionInfoKey];
 
     NSMutableData *contentData = [NSMutableData data];
 
@@ -175,7 +175,7 @@ static dispatch_data_t _createFramedMessageData(LLSocketMessage *message, LLSock
     return message_data;
 }
 
-static LLSocketMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, LLSocketInfo **infoRef)
+static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, LLBSDProcessInfo **infoRef)
 {
     NSDictionary *content = nil;
     do {
@@ -203,23 +203,23 @@ static LLSocketMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, 
     }
 
     if (infoRef != NULL) {
-        *infoRef = content[kLLSocketConnectionMessageConnectionInfoKey];
+        *infoRef = content[kLLBSDConnectionMessageConnectionInfoKey];
     }
-    return [LLSocketMessage messageWithName:content[kLLSocketConnectionMessageNameKey] userInfo:content[kLLSocketConnectionMessageUserInfoKey]];
+    return [LLBSDMessage messageWithName:content[kLLBSDConnectionMessageNameKey] userInfo:content[kLLBSDConnectionMessageUserInfoKey]];
 }
 
-- (void)_completeReadingWithMessage:(LLSocketMessage *)message info:(LLSocketInfo *)info
+- (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info
 {
-    [self.delegate connection:self didReceiveMessage:message fromConnectionInfo:info];
+    [self.delegate connection:self didReceiveMessage:message fromProcess:info];
 }
 
 @end
 
-#pragma mark - LLSocketConnectionServer
+#pragma mark - LLBSDConnectionServer
 
-static const int kLLSocketServerConnectionsBacklog = 1024;
+static const int kLLBSDServerConnectionsBacklog = 1024;
 
-@interface LLSocketConnectionServer ()
+@interface LLBSDConnectionServer ()
 
 @property (strong, nonatomic) dispatch_source_t listeningSource;
 
@@ -229,7 +229,7 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
 
 @end
 
-@implementation LLSocketConnectionServer
+@implementation LLBSDConnectionServer
 
 - (id)initWithApplicationGroupIdentifier:(NSString *)applicationGroupIdentifier connectionIdentifier:(uint8_t)connectionIdentifier
 {
@@ -245,17 +245,17 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
     return self;
 }
 
-- (void)broadcastMessage:(LLSocketMessage *)message
+- (void)broadcastMessage:(LLBSDMessage *)message completion:(void (^)(NSError *error))completion
 {
     dispatch_async(self.queue, ^ {
-        [self _broadcastMessageOnSerialQueue:message];
+        [self _broadcastMessageOnSerialQueue:message completion:completion];
     });
 }
 
-- (void)sendMessage:(LLSocketMessage *)message toClient:(LLSocketInfo *)info
+- (void)sendMessage:(LLBSDMessage *)message toClient:(LLBSDProcessInfo *)info completion:(void (^)(NSError *error))completion
 {
     dispatch_async(self.queue, ^ {
-        [self _sendMessageOnSerialQueue:message toClient:info];
+        [self _sendMessageOnSerialQueue:message toClient:info completion:completion];
     });
 }
 
@@ -285,7 +285,7 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
         return;
     }
 
-    int listening = listen(fd, kLLSocketServerConnectionsBacklog);
+    int listening = listen(fd, kLLBSDServerConnectionsBacklog);
     if (listening < 0) {
         return;
     }
@@ -313,14 +313,14 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
     }
 }
 
-- (void)_broadcastMessageOnSerialQueue:(LLSocketMessage *)message
+- (void)_broadcastMessageOnSerialQueue:(LLBSDMessage *)message completion:(void (^)(NSError *error))completion
 {
-    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLSocketInfo *info, NSNumber *fd, BOOL *stop) {
-        [self sendMessage:message toClient:info];
+    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLBSDProcessInfo *info, NSNumber *fd, BOOL *stop) {
+        [self sendMessage:message toClient:info completion:completion];
     }];
 }
 
-- (void)_sendMessageOnSerialQueue:(LLSocketMessage *)message toClient:(LLSocketInfo *)info
+- (void)_sendMessageOnSerialQueue:(LLBSDMessage *)message toClient:(LLBSDProcessInfo *)info completion:(void (^)(NSError *error))completion
 {
     dispatch_fd_t fd = [self.infoToFdMap[info] intValue];
     dispatch_io_t channel = self.fdToChannelMap[@(fd)];
@@ -329,7 +329,11 @@ static const int kLLSocketServerConnectionsBacklog = 1024;
     }
 
     dispatch_data_t message_data = _createFramedMessageData(message, info);
-    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {});
+    dispatch_io_write(channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {
+        if (completion) {
+            completion((error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil] : nil));
+        }
+    });
 }
 
 #pragma mark - Private
@@ -383,7 +387,7 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
     return proc_name;
 }
 
-- (LLSocketInfo *)_findSocketInfo:(dispatch_fd_t)fd
+- (LLBSDProcessInfo *)_findSocketInfo:(dispatch_fd_t)fd
 {
     pid_t process_identifier = _findProcessIdentifierBehindSocket(fd);
     char *process_name = _findProcessNameForProcessIdentifier(process_identifier);
@@ -392,7 +396,7 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
         return nil;
     }
 
-    return [[LLSocketInfo alloc] initWithProcessName:[NSString stringWithUTF8String:process_name] processIdentifier:process_identifier];
+    return [[LLBSDProcessInfo alloc] initWithProcessName:[NSString stringWithUTF8String:process_name] processIdentifier:process_identifier];
 }
 
 - (void)_acceptNewConnection
@@ -407,7 +411,7 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
 
     BOOL accepted = NO;
 
-    LLSocketInfo *info = [self _findSocketInfo:client_fd];
+    LLBSDProcessInfo *info = [self _findSocketInfo:client_fd];
     if (info) {
         accepted = [self.delegate server:self shouldAcceptNewConnection:info];
     }
@@ -462,8 +466,8 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
         NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(framedMessage)) length];
 
         if (contentLength == bodyLength) {
-            LLSocketInfo *info = nil;
-            LLSocketMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
+            LLBSDProcessInfo *info = nil;
+            LLBSDMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
 
             [self.fdToFramedMessageMap removeObjectForKey:@(fd)];
 
@@ -480,8 +484,8 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
         [self.fdToChannelMap removeObjectForKey:@(fd)];
     }
 
-    __block LLSocketInfo *info = nil;
-    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLSocketInfo *connectionInfo, NSNumber *fileDescriptor, BOOL *stop) {
+    __block LLBSDProcessInfo *info = nil;
+    [self.infoToFdMap enumerateKeysAndObjectsUsingBlock:^ (LLBSDProcessInfo *connectionInfo, NSNumber *fileDescriptor, BOOL *stop) {
         if (fileDescriptor.intValue == fd) {
             info = connectionInfo;
             *stop = YES;
@@ -506,21 +510,21 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
 
 @end
 
-#pragma mark - LLSocketConnectionClient
+#pragma mark - LLBSDConnectionClient
 
-@interface LLSocketConnectionClient ()
+@interface LLBSDConnectionClient ()
 
 @property (strong, nonatomic) dispatch_io_t channel;
 @property (strong, nonatomic) id /* CFHTTPMessageRef */ framedMessage;
 
 @end
 
-@implementation LLSocketConnectionClient
+@implementation LLBSDConnectionClient
 
-- (void)sendMessage:(LLSocketMessage *)message
+- (void)sendMessage:(LLBSDMessage *)message completion:(void (^)(NSError *error))completion
 {
     dispatch_async(self.queue, ^ {
-        [self _sendMessageOnSerialQueue:message];
+        [self _sendMessageOnSerialQueue:message completion:completion];
     });
 }
 
@@ -565,10 +569,14 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
     }
 }
 
-- (void)_sendMessageOnSerialQueue:(LLSocketMessage *)message
+- (void)_sendMessageOnSerialQueue:(LLBSDMessage *)message completion:(void (^)(NSError *error))completion
 {
     dispatch_data_t message_data = _createFramedMessageData(message, self.info);
-    dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {});
+    dispatch_io_write(self.channel, 0, message_data, self.queue, ^ (bool done, dispatch_data_t data, int error) {
+        if (completion) {
+            completion((error != 0 ? [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil] : nil));
+        }
+    });
 }
 
 #pragma mark - Private
@@ -614,8 +622,8 @@ static char *_findProcessNameForProcessIdentifier(pid_t pid)
         NSInteger bodyLength = (NSInteger)[CFBridgingRelease(CFHTTPMessageCopyBody(framedMessage)) length];
 
         if (contentLength == bodyLength) {
-            LLSocketInfo *info = nil;
-            LLSocketMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
+            LLBSDProcessInfo *info = nil;
+            LLBSDMessage *message = _createMessageFromHTTPMessage(framedMessage, &info);
 
             self.framedMessage = nil;
 

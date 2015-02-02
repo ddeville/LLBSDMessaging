@@ -1,6 +1,6 @@
 //
-//  LLSocketMessage.h
-//  LLMessaging
+//  LLBSDMessage.h
+//  LLBSDMessaging
 //
 //  Created by Damien DeVille on 2/1/15.
 //  Copyright (c) 2015 Damien DeVille. All rights reserved.
@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
-@interface LLSocketMessage : NSObject
+@interface LLBSDMessage : NSObject
 
 /*!
     \brief
