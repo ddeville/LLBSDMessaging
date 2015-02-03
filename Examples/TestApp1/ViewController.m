@@ -29,7 +29,11 @@
     server.allowedMessageClasses = [NSSet setWithObject:[SpecialMessage class]];
     self.server = server;
 
-    [server start];
+    [server start:^ void (NSError *error) {
+        if (error) {
+            [self _presentError:error];
+        }
+    }];
 }
 
 - (void)_presentError:(NSError *)error

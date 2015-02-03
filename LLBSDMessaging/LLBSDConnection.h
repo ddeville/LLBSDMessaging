@@ -70,8 +70,11 @@
 /*!
     \brief
     Starts the connection. It is a programmer error to start a connection that is still valid.
+
+    \param completion
+    A block that is invoked when the host has started or failed to start.
  */
-- (void)start;
+- (void)start:(void (^)(NSError *error))completion;
 
 /*!
     \brief

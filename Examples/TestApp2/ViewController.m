@@ -28,7 +28,11 @@
     client.delegate = self;
     self.client = client;
 
-    [client start];
+    [client start:^ void (NSError *error) {
+        if (error) {
+            [self _presentError:error];
+        }
+    }];
 }
 
 - (void)_presentError:(NSError *)error

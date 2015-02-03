@@ -32,7 +32,7 @@ static const pid_t kInvalidPid = -1;
 
 @property (strong, nonatomic) dispatch_queue_t queue;
 
-- (void)_startOnSerialQueue;
+- (void)_startOnSerialQueue:(void (^)(NSError *error))completion;
 - (void)_invalidateOnSerialQueue;
 - (void)_completeReadingWithMessage:(LLBSDMessage *)message info:(LLBSDProcessInfo *)info;
 
@@ -68,10 +68,10 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
     [self invalidate];
 }
 
-- (void)start
+- (void)start:(void (^)(NSError *error))completion
 {
     dispatch_async(self.queue, ^ {
-        [self _startOnSerialQueue];
+        [self _startOnSerialQueue:completion];
     });
 }
 
@@ -115,7 +115,7 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
 
 #pragma mark - Private (Serial Queue)
 
-- (void)_startOnSerialQueue
+- (void)_startOnSerialQueue:(__unused void (^)(NSError *error))completion
 {
     NSAssert(NO, @"Cannot call on the base class");
 }
@@ -300,12 +300,20 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
 
 #pragma mark - Private (Serial Queue)
 
-- (void)_startOnSerialQueue
+- (void)_startOnSerialQueue:(void (^)(NSError *error))completion
 {
     NSParameterAssert(self.fd == kInvalidPid);
 
+    void (^reportError)(void) = ^ {
+        if (completion) {
+            NSString *description = (strerror(errno) ? [NSString stringWithUTF8String:strerror(errno)] : @"");
+            completion([NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:@{NSLocalizedDescriptionKey : description}]);
+        }
+    };
+
     dispatch_fd_t fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
+        reportError();
         return;
     }
 
@@ -321,11 +329,13 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
 
     int bound = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (bound < 0) {
+        reportError();
         return;
     }
 
     int listening = listen(fd, kLLBSDServerConnectionsBacklog);
     if (listening < 0) {
+        reportError();
         return;
     }
 
@@ -335,6 +345,10 @@ static const int kLLBSDServerConnectionsBacklog = 1024;
     });
     dispatch_resume(listeningSource);
     self.listeningSource = listeningSource;
+
+    if (completion) {
+        completion(nil);
+    }
 }
 
 - (void)_invalidateOnSerialQueue
@@ -591,12 +605,20 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
 #pragma mark - Private (Serial Queue)
 
-- (void)_startOnSerialQueue
+- (void)_startOnSerialQueue:(void (^)(NSError *error))completion
 {
     NSParameterAssert(self.fd == kInvalidPid);
 
+    void (^reportError)(void) = ^ {
+        if (completion) {
+            NSString *description = (strerror(errno) ? [NSString stringWithUTF8String:strerror(errno)] : @"");
+            completion([NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:@{NSLocalizedDescriptionKey : description}]);
+        }
+    };
+
     dispatch_fd_t fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
+        reportError();
         return;
     }
 
@@ -611,10 +633,15 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     int connected = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (connected < 0) {
+        reportError();
         return;
     }
 
     [self _setupChannel];
+
+    if (completion) {
+        completion(nil);
+    }
 }
 
 - (void)_invalidateOnSerialQueue
