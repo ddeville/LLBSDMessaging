@@ -164,10 +164,8 @@ static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProc
 
     @try {
         [archiver encodeObject:content forKey:NSKeyedArchiveRootObjectKey];
-        [archiver finishEncoding];
     }
     @catch (NSException *exception) {
-        [archiver finishEncoding];
         if ([exception.name isEqualToString:NSInvalidUnarchiveOperationException]) {
             if (errorRef != NULL) {
                 *errorRef = [NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingEncodingError userInfo:@{NSLocalizedDescriptionKey : exception.reason}];
@@ -176,6 +174,9 @@ static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProc
         }
         @throw exception;
         return NULL;
+    }
+    @finally {
+        [archiver finishEncoding];
     }
 
     CFHTTPMessageRef response = CFHTTPMessageCreateResponse(kCFAllocatorDefault, 200, NULL, kCFHTTPVersion1_1);
@@ -214,10 +215,8 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSS
 
         @try {
             content = [unarchiver decodeObjectOfClasses:classes forKey:NSKeyedArchiveRootObjectKey];
-            [unarchiver finishDecoding];
         }
         @catch (NSException *exception) {
-            [unarchiver finishDecoding];
             if ([exception.name isEqualToString:NSInvalidUnarchiveOperationException]) {
                 if (errorRef != NULL) {
                     *errorRef = [NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingDecodingError userInfo:@{NSLocalizedDescriptionKey : exception.reason}];
@@ -225,6 +224,9 @@ static LLBSDMessage *_createMessageFromHTTPMessage(CFHTTPMessageRef message, NSS
                 break;
             }
             @throw exception;
+        }
+        @finally {
+            [unarchiver finishDecoding];
         }
     } while (0);
 
