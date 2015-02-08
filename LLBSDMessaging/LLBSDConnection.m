@@ -637,7 +637,8 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     int connected = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (connected < 0) {
-        reportError();
+        NSError *underlyingError = [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:@{NSLocalizedDescriptionKey : (strerror(errno) ? [NSString stringWithUTF8String:strerror(errno)] : @"")}];
+        completion([NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingInvalidChannelError userInfo:@{NSUnderlyingErrorKey : underlyingError}]);
         return;
     }
 
