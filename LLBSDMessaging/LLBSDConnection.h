@@ -73,6 +73,7 @@
 
     \param completion
     A block that is invoked when the host has started or failed to start.
+    An error with a `LLBSDMessagingErrorDomain` domain and `LLBSDMessagingInvalidChannelError` code will be returned when attempting to connect a client to a non-connected server.
  */
 - (void)start:(void (^)(NSError *error))completion;
 
