@@ -68,6 +68,8 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
     [self invalidate];
 }
 
+#pragma mark - Public
+
 - (void)start:(void (^)(NSError *error))completion
 {
     dispatch_async(self.queue, ^ {
