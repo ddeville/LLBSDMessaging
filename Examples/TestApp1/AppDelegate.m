@@ -8,11 +8,31 @@
 
 #import "AppDelegate.h"
 
+@interface AppDelegate ()
+
+@property (assign, nonatomic) UIBackgroundTaskIdentifier backgroundTaskIdentifier;
+
+@end
+
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     return YES;
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application
+{
+    self.backgroundTaskIdentifier = [application beginBackgroundTaskWithExpirationHandler:^{
+        [application endBackgroundTask:self.backgroundTaskIdentifier];
+        self.backgroundTaskIdentifier = UIBackgroundTaskInvalid;
+    }];
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application
+{
+    [application endBackgroundTask:self.backgroundTaskIdentifier];
+    self.backgroundTaskIdentifier = UIBackgroundTaskInvalid;
 }
 
 @end
