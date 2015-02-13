@@ -27,7 +27,7 @@ static const pid_t kInvalidPid = -1;
 
 @interface LLBSDConnection ()
 
-@property (assign, nonatomic) NSString *socketPath;
+@property (copy, nonatomic) NSString *socketPath;
 @property (assign, nonatomic) dispatch_fd_t fd;
 
 @property (strong, nonatomic) dispatch_queue_t queue;
