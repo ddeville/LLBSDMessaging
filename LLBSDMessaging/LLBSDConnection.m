@@ -131,6 +131,8 @@ static NSString *_LLBSDConnectionValidObservationContext = @"_LLBSDConnectionVal
 
 static NSString *_createSocketPath(NSString *applicationGroupIdentifier, uint8_t connectionIdentifier)
 {
+	NSString *socketPath = nil;
+	
     /*
      * `sockaddr_un.sun_path` has a max length of 104 characters
      * However, the container URL for the application group identifier in the simulator is much longer than that
@@ -138,16 +140,21 @@ static NSString *_createSocketPath(NSString *applicationGroupIdentifier, uint8_t
      */
 #if TARGET_IPHONE_SIMULATOR
     NSString *tempGroupLocation = [NSString stringWithFormat:@"/tmp/%@", applicationGroupIdentifier];
-    NSString *socketPath = [tempGroupLocation stringByAppendingPathComponent:[NSString stringWithFormat:@"%d", connectionIdentifier]];
     [[NSFileManager defaultManager] createDirectoryAtPath:tempGroupLocation withIntermediateDirectories:YES attributes:nil error:NULL];
-    return socketPath;
+	
+	socketPath = [tempGroupLocation stringByAppendingPathComponent:[NSString stringWithFormat:@"%d", connectionIdentifier]];
 #else
     NSURL *applicationGroupURL = [[NSFileManager defaultManager] containerURLForSecurityApplicationGroupIdentifier:applicationGroupIdentifier];
-    NSCParameterAssert(applicationGroupURL);
+	NSCAssert(applicationGroupURL != nil, @"Cannot retrieve the container URL for the application group identifier %@. Make sure that it has been added to the `com.apple.security.application-groups` entitlement.", applicationGroupIdentifier);
 
     NSURL *socketURL = [applicationGroupURL URLByAppendingPathComponent:[NSString stringWithFormat:@"%d", connectionIdentifier]];
-    return socketURL.path;
+	socketPath = socketURL.path;
 #endif /* TARGET_IPHONE_SIMULATOR */
+	
+	static const int __attribute__((unused)) kSockaddrSunPathMaxLength = 104;
+	NSCAssert(strlen(socketPath.UTF8String) <= kSockaddrSunPathMaxLength, @"The socket path is limited to %i characters but the path %@ is %li character. Consider using a shorter application group identifier", kSockaddrSunPathMaxLength, socketPath, strlen(socketPath.UTF8String));
+	
+	return socketPath;
 }
 
 static dispatch_data_t _createFramedMessageData(LLBSDMessage *message, LLBSDProcessInfo *info, NSError **errorRef)
