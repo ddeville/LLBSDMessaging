@@ -633,8 +633,6 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
         return;
     }
 
-    self.fd = fd;
-
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
@@ -644,10 +642,13 @@ static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 
     int connected = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
     if (connected < 0) {
+        close(fd);
         NSError *underlyingError = [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:@{NSLocalizedDescriptionKey : (strerror(errno) ? [NSString stringWithUTF8String:strerror(errno)] : @"")}];
         completion([NSError errorWithDomain:LLBSDMessagingErrorDomain code:LLBSDMessagingInvalidChannelError userInfo:@{NSUnderlyingErrorKey : underlyingError}]);
         return;
     }
+
+    self.fd = fd;
 
     [self _setupChannel];
 
