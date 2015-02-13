@@ -19,39 +19,39 @@
 		6D6314E61A7EA10000E4CD2C /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6D6314E41A7EA10000E4CD2C /* Main.storyboard */; };
 		6D6314E81A7EA10000E4CD2C /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6D6314E71A7EA10000E4CD2C /* Images.xcassets */; };
 		6D6314EB1A7EA10000E4CD2C /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6D6314E91A7EA10000E4CD2C /* LaunchScreen.xib */; };
+		6DB1EC681A8E96F800F57A40 /* LLBSDMessaging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DB1EC631A8E96E800F57A40 /* LLBSDMessaging.framework */; };
+		6DB1EC691A8E96FD00F57A40 /* LLBSDMessaging.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 6DB1EC631A8E96E800F57A40 /* LLBSDMessaging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		6DB1EC6C1A8E970300F57A40 /* LLBSDMessaging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DB1EC631A8E96E800F57A40 /* LLBSDMessaging.framework */; };
+		6DB1EC6D1A8E970700F57A40 /* LLBSDMessaging.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 6DB1EC631A8E96E800F57A40 /* LLBSDMessaging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		6DE5478E1A7F0FCC00BF02E1 /* SpecialMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 6DE5478D1A7F0FCC00BF02E1 /* SpecialMessage.m */; };
 		6DE5478F1A7F0FCC00BF02E1 /* SpecialMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 6DE5478D1A7F0FCC00BF02E1 /* SpecialMessage.m */; };
-		6DE547CA1A7F193600BF02E1 /* LLBSDMessaging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DE547C51A7F192300BF02E1 /* LLBSDMessaging.framework */; };
-		6DE547CB1A7F194400BF02E1 /* LLBSDMessaging.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 6DE547C51A7F192300BF02E1 /* LLBSDMessaging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		6DE547CE1A7F194D00BF02E1 /* LLBSDMessaging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DE547C51A7F192300BF02E1 /* LLBSDMessaging.framework */; };
-		6DE547CF1A7F195100BF02E1 /* LLBSDMessaging.framework in Copy Frameworks */ = {isa = PBXBuildFile; fileRef = 6DE547C51A7F192300BF02E1 /* LLBSDMessaging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		6DE547C41A7F192300BF02E1 /* PBXContainerItemProxy */ = {
+		6DB1EC621A8E96E800F57A40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */;
+			containerPortal = 6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = 6D6314271A7E9DC600E4CD2C;
 			remoteInfo = LLBSDMessaging;
 		};
-		6DE547C61A7F192300BF02E1 /* PBXContainerItemProxy */ = {
+		6DB1EC641A8E96E800F57A40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */;
+			containerPortal = 6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = 6D6314321A7E9DC600E4CD2C;
 			remoteInfo = Tests;
 		};
-		6DE547C81A7F193100BF02E1 /* PBXContainerItemProxy */ = {
+		6DB1EC661A8E96F400F57A40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */;
+			containerPortal = 6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 6D6314261A7E9DC600E4CD2C;
 			remoteInfo = LLBSDMessaging;
 		};
-		6DE547CC1A7F194900BF02E1 /* PBXContainerItemProxy */ = {
+		6DB1EC6A1A8E970100F57A40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */;
+			containerPortal = 6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */;
 			proxyType = 1;
 			remoteGlobalIDString = 6D6314261A7E9DC600E4CD2C;
 			remoteInfo = LLBSDMessaging;
@@ -65,7 +65,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				6DE547CB1A7F194400BF02E1 /* LLBSDMessaging.framework in Copy Frameworks */,
+				6DB1EC691A8E96FD00F57A40 /* LLBSDMessaging.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -76,7 +76,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				6DE547CF1A7F195100BF02E1 /* LLBSDMessaging.framework in Copy Frameworks */,
+				6DB1EC6D1A8E970700F57A40 /* LLBSDMessaging.framework in Copy Frameworks */,
 			);
 			name = "Copy Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -106,9 +106,9 @@
 		6D6314EA1A7EA10000E4CD2C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/LaunchScreen.xib; sourceTree = "<group>"; };
 		6D63150C1A7EA16700E4CD2C /* TestApp1.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = TestApp1.entitlements; path = TestApp1/TestApp1.entitlements; sourceTree = SOURCE_ROOT; };
 		6D63150E1A7EA17100E4CD2C /* TestApp2.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = TestApp2.entitlements; sourceTree = "<group>"; };
+		6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = LLBSDMessaging.xcodeproj; path = ../../LLBSDMessaging.xcodeproj; sourceTree = "<group>"; };
 		6DE5478C1A7F0FCC00BF02E1 /* SpecialMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SpecialMessage.h; path = Shared/SpecialMessage.h; sourceTree = SOURCE_ROOT; };
 		6DE5478D1A7F0FCC00BF02E1 /* SpecialMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SpecialMessage.m; path = Shared/SpecialMessage.m; sourceTree = SOURCE_ROOT; };
-		6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = LLBSDMessaging.xcodeproj; path = ../LLBSDMessaging.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,7 +116,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6DE547CA1A7F193600BF02E1 /* LLBSDMessaging.framework in Frameworks */,
+				6DB1EC681A8E96F800F57A40 /* LLBSDMessaging.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,7 +124,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6DE547CE1A7F194D00BF02E1 /* LLBSDMessaging.framework in Frameworks */,
+				6DB1EC6C1A8E970300F57A40 /* LLBSDMessaging.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,7 +137,7 @@
 				6D63149B1A7EA08C00E4CD2C /* TestApp1 */,
 				6D6314D91A7EA10000E4CD2C /* TestApp2 */,
 				6DE547901A7F0FCF00BF02E1 /* Shared */,
-				6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */,
+				6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */,
 				6D63149A1A7EA08C00E4CD2C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -202,6 +202,15 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		6DB1EC5E1A8E96E800F57A40 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6DB1EC631A8E96E800F57A40 /* LLBSDMessaging.framework */,
+				6DB1EC651A8E96E800F57A40 /* LLBSDMessagingTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		6DE547901A7F0FCF00BF02E1 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -209,15 +218,6 @@
 				6DE5478D1A7F0FCC00BF02E1 /* SpecialMessage.m */,
 			);
 			name = Shared;
-			sourceTree = "<group>";
-		};
-		6DE547C01A7F192300BF02E1 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				6DE547C51A7F192300BF02E1 /* LLBSDMessaging.framework */,
-				6DE547C71A7F192300BF02E1 /* LLBSDMessagingTests.xctest */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -235,7 +235,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				6DE547C91A7F193100BF02E1 /* PBXTargetDependency */,
+				6DB1EC671A8E96F400F57A40 /* PBXTargetDependency */,
 			);
 			name = TestApp1;
 			productName = TestApp;
@@ -254,7 +254,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				6DE547CD1A7F194900BF02E1 /* PBXTargetDependency */,
+				6DB1EC6B1A8E970100F57A40 /* PBXTargetDependency */,
 			);
 			name = TestApp2;
 			productName = TestApp2;
@@ -291,8 +291,8 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = 6DE547C01A7F192300BF02E1 /* Products */;
-					ProjectRef = 6DE547BF1A7F192300BF02E1 /* LLBSDMessaging.xcodeproj */;
+					ProductGroup = 6DB1EC5E1A8E96E800F57A40 /* Products */;
+					ProjectRef = 6DB1EC5D1A8E96E800F57A40 /* LLBSDMessaging.xcodeproj */;
 				},
 			);
 			projectRoot = "";
@@ -304,18 +304,18 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		6DE547C51A7F192300BF02E1 /* LLBSDMessaging.framework */ = {
+		6DB1EC631A8E96E800F57A40 /* LLBSDMessaging.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = LLBSDMessaging.framework;
-			remoteRef = 6DE547C41A7F192300BF02E1 /* PBXContainerItemProxy */;
+			remoteRef = 6DB1EC621A8E96E800F57A40 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		6DE547C71A7F192300BF02E1 /* LLBSDMessagingTests.xctest */ = {
+		6DB1EC651A8E96E800F57A40 /* LLBSDMessagingTests.xctest */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.cfbundle;
 			path = LLBSDMessagingTests.xctest;
-			remoteRef = 6DE547C61A7F192300BF02E1 /* PBXContainerItemProxy */;
+			remoteRef = 6DB1EC641A8E96E800F57A40 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -369,15 +369,15 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		6DE547C91A7F193100BF02E1 /* PBXTargetDependency */ = {
+		6DB1EC671A8E96F400F57A40 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = LLBSDMessaging;
-			targetProxy = 6DE547C81A7F193100BF02E1 /* PBXContainerItemProxy */;
+			targetProxy = 6DB1EC661A8E96F400F57A40 /* PBXContainerItemProxy */;
 		};
-		6DE547CD1A7F194900BF02E1 /* PBXTargetDependency */ = {
+		6DB1EC6B1A8E970100F57A40 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = LLBSDMessaging;
-			targetProxy = 6DE547CC1A7F194900BF02E1 /* PBXContainerItemProxy */;
+			targetProxy = 6DB1EC6A1A8E970100F57A40 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

@@ -76,6 +76,7 @@
 				6D6314281A7E9DC600E4CD2C /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 0;
 		};
 		6D6314281A7E9DC600E4CD2C /* Products */ = {
 			isa = PBXGroup;
