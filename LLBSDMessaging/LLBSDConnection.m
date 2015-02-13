@@ -429,7 +429,7 @@ static pid_t _findProcessIdentifierBehindSocket(dispatch_fd_t fd)
 static NSString *_findProcessNameForProcessIdentifier(pid_t pid)
 {
     if (pid == kInvalidPid) {
-        return NULL;
+        return nil;
     }
 
     static const int name[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
